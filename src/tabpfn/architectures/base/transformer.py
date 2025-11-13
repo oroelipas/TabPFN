@@ -598,11 +598,11 @@ class PerFeatureTransformer(Architecture):
         del embedded_input
 
         # out: s b e
-        test_encoder_out = encoder_out[:, single_eval_pos:, -1].transpose(0, 1)
+        test_encoder_out = encoder_out[:, single_eval_pos:, :].transpose(0, 1)
 
         if only_return_standard_out:
             assert self.decoder_dict is not None
-            output_decoded = self.decoder_dict["standard"](test_encoder_out)
+            output_decoded = self.decoder_dict["standard"](test_encoder_out[:,:,-1])
         else:
             output_decoded = (
                 {k: v(test_encoder_out) for k, v in self.decoder_dict.items()}
@@ -617,10 +617,12 @@ class PerFeatureTransformer(Architecture):
                 else 0
             )
             train_encoder_out = encoder_out[
-                :, thinking_rows_offset:single_eval_pos, -1
+                :, thinking_rows_offset:single_eval_pos, :
             ].transpose(0, 1)
-            output_decoded["train_embeddings"] = train_encoder_out
-            output_decoded["test_embeddings"] = test_encoder_out
+            output_decoded["train_embeddings"] = train_encoder_out[:,:,-1] # out: s b e
+            output_decoded["test_embeddings"] = test_encoder_out[:,:,-1] # out: s b e
+            output_decoded["train_embeddings_all"] = train_encoder_out # out: s b f+1 e
+            output_decoded["test_embeddings_all"] = test_encoder_out # out: s b f+1 e
 
         return output_decoded
 

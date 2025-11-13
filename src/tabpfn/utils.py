@@ -90,7 +90,8 @@ def get_embeddings(
     """
     check_is_fitted(model)
 
-    data_map = {"train": "train_embeddings", "test": "test_embeddings"}
+    data_map = {"train": "train_embeddings", "test": "test_embeddings", 
+                "train_all": "train_embeddings_all", "test_all": "test_embeddings_all"}
 
     selected_data = data_map[data_source]
 
@@ -117,7 +118,7 @@ def get_embeddings(
         output_dict = typing.cast("dict[str, torch.Tensor]", output)
         embed = output_dict[selected_data].squeeze(1)
         assert isinstance(config, (ClassifierEnsembleConfig, RegressorEnsembleConfig))
-        assert embed.ndim == 2
+        #assert embed.ndim == 2 # This line is commented out to allow retrieving the representation of all tokens, not only [CLS]
         embeddings.append(embed.squeeze().cpu().numpy())
 
     return np.array(embeddings)

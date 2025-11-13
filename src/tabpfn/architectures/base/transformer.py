@@ -310,6 +310,9 @@ class PerFeatureTransformer(Architecture):
         force_recompute_layer: bool = False,
     ) -> torch.Tensor: ...
 
+    def cat_x_y(self, x, y):
+        return torch.cat((x, y.unsqueeze(2)), dim=2)
+
     @overload
     def forward(
         self,
@@ -542,7 +545,8 @@ class PerFeatureTransformer(Architecture):
         del data_dags
 
         # b s f e + b s 1 e -> b s f+1 e
-        embedded_input = torch.cat((embedded_x, embedded_y.unsqueeze(2)), dim=2)
+        # A custom function is used to concatenate X and Y, which can be replaced with a dummy version that skips Y concatenation
+        embedded_input = self.cat_x_y(embedded_x, embedded_y)
 
         if torch.isnan(embedded_input).any():
             raise ValueError(

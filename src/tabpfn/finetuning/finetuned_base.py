@@ -31,6 +31,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from tqdm.auto import tqdm
 
+from tabpfn.architectures.interface import PerformanceOptions
 from tabpfn.finetuning._torch_compat import GradScaler, autocast, sdpa_kernel_context
 from tabpfn.finetuning.data_util import (
     ClassifierBatch,
@@ -669,8 +670,10 @@ class FinetunedTabPFNBase(BaseEstimator, ABC):
         self.finetuned_estimator_._initialize_model_variables()
         self.finetuned_estimator_.model_.to(self.device)
 
-        if self.use_activation_checkpointing:
-            self.finetuned_estimator_.model_.recompute_layer = True  # type: ignore
+        finetuning_performance_options = PerformanceOptions(
+            force_recompute_layer=self.use_activation_checkpointing,
+            use_chunkwise_inference=False,
+        )
 
         # --- DDP model wrapping ---
         model_for_optimization = self.finetuned_estimator_.model_
@@ -854,6 +857,7 @@ class FinetunedTabPFNBase(BaseEstimator, ABC):
                     batch.y_context,
                     batch.cat_indices,
                     batch.configs,
+                    performance_options=finetuning_performance_options,
                 )
 
                 if using_ddp:

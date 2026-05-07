@@ -103,7 +103,11 @@ if TYPE_CHECKING:
     from torch.types import _dtype
 
     from tabpfn.architectures.base.memory import MemorySavingMode
-    from tabpfn.architectures.interface import Architecture, ArchitectureConfig
+    from tabpfn.architectures.interface import (
+        Architecture,
+        ArchitectureConfig,
+        PerformanceOptions,
+    )
     from tabpfn.inference_config import InferenceConfig
 
     try:
@@ -817,7 +821,6 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
             fit_mode=self.fit_mode,
             X_train=X,
             y_train=y,
-            feature_schema=self.inferred_feature_schema_,
             models=self.models_,
             ensemble_preprocessor=self.ensemble_preprocessor_,
             devices_=self.devices_,
@@ -838,6 +841,7 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
         cat_ix: list[list[list[int]]],
         configs: list[list[EnsembleConfig]],
         *,
+        performance_options: PerformanceOptions,
         no_refit: bool = True,
     ) -> TabPFNClassifier:
         """Used in Fine-Tuning. Fit the model to preprocessed inputs from torch
@@ -852,6 +856,8 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
             y_preprocessed: The target variable obtained from the preprocessed Dataset
             cat_ix: categorical indices obtained from the preprocessed Dataset
             configs: Ensemble configurations obtained from the preprocessed Dataset
+            performance_options: Performance and memory options forwarded to the
+                model on each forward call inside the resulting executor.
             no_refit: if True, the classifier will not be reinitialized when calling
                 fit multiple times.
         """
@@ -886,6 +892,7 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
             force_inference_dtype=self.forced_inference_dtype_,
             save_peak_mem=self.memory_saving_mode,
             inference_mode=not self.differentiable_input,
+            performance_options=performance_options,
         )
 
         return self

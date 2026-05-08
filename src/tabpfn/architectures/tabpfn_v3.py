@@ -408,6 +408,9 @@ class ManyClassDecoder(nn.Module):
         """Perform a forward pass."""
         B, M, _ = test_embeddings.shape
         q_BME = self.q_projection(test_embeddings)
+        # Mirrors the dtype guard in ICLAttention's cached path.
+        if train_embeddings.dtype != q_BME.dtype:
+            train_embeddings = train_embeddings.to(q_BME.dtype)
         k_BNE = self.k_projection(train_embeddings)
 
         if M == 0:
@@ -1812,9 +1815,11 @@ class TabPFNV3(Architecture):
                 built_cache = kv_cache  # pass through unchanged
             else:
                 scaler_stats = self.standard_scaler.fit(x_RiBC[:num_train])
+                # Store train_embeddings at the ICL KV cache dtype.
+                cache_dtype = next(iter(icl_cache_out.kv.values())).key.dtype
                 built_cache = TabPFNV3Cache(
                     icl_cache=icl_cache_out,
-                    train_embeddings=train_emb.detach(),
+                    train_embeddings=train_emb.detach().to(cache_dtype),
                     train_shape=(B, num_train),
                     scaler_cache={k: v.detach() for k, v in scaler_stats.items()},
                     inducing_hidden=(

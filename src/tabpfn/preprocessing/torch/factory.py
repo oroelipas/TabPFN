@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from tabpfn.preprocessing.datamodel import FeatureModality
 from tabpfn.preprocessing.torch.gpu_preprocessing_metadata import (
     compute_effective_n_quantiles,
+    get_squashing_scaler_max_absolute_value,
 )
 from tabpfn.preprocessing.torch.pipeline_interface import (
     TorchPreprocessingPipeline,
@@ -18,6 +19,7 @@ from tabpfn.preprocessing.torch.steps import (
     TorchAddFingerprintFeaturesStep,
     TorchAddSVDFeaturesStep,
     TorchSelectiveQuantileTransformerStep,
+    TorchSelectiveSquashingScalerStep,
     TorchShuffleFeaturesStep,
     TorchSoftClipOutliersStep,
 )
@@ -56,7 +58,8 @@ def create_gpu_preprocessing_pipeline(
 
     if enable_gpu_preprocessing and feature_schema is not None:
         # Quantile transform — target columns are annotated in the schema
-        # by ReshapeFeatureDistributionsStep(mark_quantile_for_gpu=True).
+        # by ReshapeFeatureDistributionsStep with
+        # schedule_gpu_transform=GPUTransformType.QUANTILE.
         quantile_target_indices = (
             feature_schema.get_indices_marked_for_gpu_quantile_transform()
         )
@@ -68,6 +71,24 @@ def create_gpu_preprocessing_pipeline(
                     TorchSelectiveQuantileTransformerStep(
                         n_quantiles=n_quantiles,
                         target_column_indices=quantile_target_indices,
+                    ),
+                    None,  # operates on explicit indices, receives full tensor
+                )
+            )
+
+        # Squashing scaler — target columns are annotated in the schema
+        # by ReshapeFeatureDistributionsStep with
+        # schedule_gpu_transform=GPUTransformType.SQUASHING_SCALER.
+        squashing_scaler_target_indices = (
+            feature_schema.get_indices_marked_for_gpu_squashing_scaler_transform()
+        )
+        if squashing_scaler_target_indices:
+            max_absolute_value = get_squashing_scaler_max_absolute_value(pconfig.name)
+            steps.append(
+                (
+                    TorchSelectiveSquashingScalerStep(
+                        max_absolute_value=max_absolute_value,
+                        target_column_indices=squashing_scaler_target_indices,
                     ),
                     None,  # operates on explicit indices, receives full tensor
                 )

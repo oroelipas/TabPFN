@@ -23,6 +23,11 @@
 pip install tabpfn
 ```
 
+Note: For best performance on Apple Silicon/MPS, consider installing a pytorch version after
+the nightly "2.13.0.dev20260510". This enables flash attention without relying on MLX
+(the latter requires a GPU-CPU-GPU roundtrip).
+
+
 ### Basic Usage
 
 > ⚡ **GPU Recommended**:
